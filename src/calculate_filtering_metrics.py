@@ -1,4 +1,4 @@
-"""Calculate embeddings for a dataset and store in a .mat file.
+"""Calculate filtering metrics for a dataset and store in a .hdf file.
 """
 # MIT License
 # 
@@ -40,12 +40,7 @@ import math
 def main(args):
     network = importlib.import_module(args.model_def, 'inference')
   
-    model_dir = '/media/data/DeepLearning/models/facenet/20161231-150622'
-    model = os.path.join(os.path.expanduser(model_dir),'model-20161231-150622.ckpt-80000')
-
-  
     train_set = facenet.get_dataset(args.dataset_dir)
-    #train_set = train_set[0:50]
   
     with tf.Graph().as_default():
       
@@ -62,7 +57,7 @@ def main(args):
         saver = tf.train.Saver(tf.global_variables())
         
         with tf.Session() as sess:
-            saver.restore(sess, model)
+            saver.restore(sess, os.path.join(os.path.expanduser(args.model_file)))
             tf.train.start_queue_runners(sess=sess)
                 
             embedding_size = int(embeddings.get_shape()[1])
@@ -105,8 +100,7 @@ def main(args):
                 print('Batch %d in %.3f seconds' % (i, time.time()-t))
                 
             print('Writing filtering data to %s' % args.data_file_name)
-            mdict = {'class_names':class_names, 'image_list':image_list, 'label_list':label_list, 'class_variance':class_variance, 
-                  'class_center':class_center, 'distance_to_center':distance_to_center }
+            mdict = {'class_names':class_names, 'image_list':image_list, 'label_list':label_list, 'distance_to_center':distance_to_center }
             with h5py.File(args.data_file_name, 'w') as f:
                 for key, value in mdict.iteritems():
                     f.create_dataset(key, data=value)
@@ -118,6 +112,8 @@ def parse_arguments(argv):
         help='Path to the directory containing aligned dataset.')
     parser.add_argument('model_def', type=str,
         help='Model definition. Points to a module containing the definition of the inference graph.')
+    parser.add_argument('model_file', type=str,
+        help='File containing the model parameters in checkpoint format.')
     parser.add_argument('data_file_name', type=str,
         help='The name of the file to store filtering data in.')
     parser.add_argument('--image_size', type=int,
